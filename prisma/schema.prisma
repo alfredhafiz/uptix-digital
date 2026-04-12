@@ -1,0 +1,304 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  role          Role      @default(CLIENT)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  emailVerified DateTime?
+
+  orders            Order[]
+  messages          Message[]  @relation("SentMessages")
+  received          Message[]  @relation("ReceivedMessages")
+  blogs             Blog[]
+  accounts          Account[]
+  sessions          Session[]
+  orderAuditLogs    OrderAuditLog[]  @relation("OrderAuditLogs")
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  serviceType ServiceType
+  title       String
+  description String      @db.Text
+  budget      Float?
+  status      OrderStatus @default(PENDING)
+  timeline    String?
+  files       String[]
+  internalNotes String?   @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  dueDate       DateTime?
+  revisionCount Int       @default(0)
+  startedAt     DateTime?
+  completedAt   DateTime?
+  messages    Message[]
+  payments    Payment[]
+  auditLogs   OrderAuditLog[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  content     String   @db.Text
+  userId      String
+  user        User     @relation("SentMessages", fields: [userId], references: [id])
+  recipientId String?
+  recipient   User?    @relation("ReceivedMessages", fields: [recipientId], references: [id])
+  orderId     String?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  isGeneral   Boolean  @default(false)
+  attachments String[]
+  createdAt   DateTime @default(now())
+  read        Boolean  @default(false)
+
+  @@index([userId])
+  @@index([recipientId])
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+model OrderAuditLog {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String?  // Admin who made the change (nullable for system actions)
+  user      User?    @relation("OrderAuditLogs", fields: [userId], references: [id], onDelete: SetNull)
+  action    String   // e.g., "STATUS_CHANGED", "DUE_DATE_UPDATED", "NOTES_ADDED"
+  details   String   @db.Text // JSON string with before/after values
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([orderId, createdAt])
+}
+
+model Blog {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String   @db.Text
+  excerpt     String?
+  coverImage  String?
+  published   Boolean  @default(false)
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  tags        String[]
+  metaTitle   String?
+  metaDesc    String?
+  views       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([authorId])
+  @@index([published])
+  @@index([createdAt])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.Text
+  price       Float
+  previewUrl  String?
+  repoUrl     String?
+  images      String[]
+  techStack   String[]
+  category    String
+  featured    Boolean  @default(false)
+  published   Boolean  @default(true)
+  downloads   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([published])
+  @@index([featured])
+  @@index([createdAt])
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  orderId   String
+  order     Order         @relation(fields: [orderId], references: [id])
+  amount    Float
+  method    PaymentMethod
+  status    PaymentStatus @default(PENDING)
+  txnId     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Settings {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  value           String   @db.Text
+  type            String   @default("string") // string, number, boolean, json
+  description     String?
+  isPublic        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.Text
+  features    String[]
+  icon        String   // Icon name from lucide-react
+  color       String   // blue, purple, pink, cyan, yellow, green, etc.
+  price       String
+  slug        String   @unique
+  order       Int      @default(0)
+  published   Boolean  @default(true)
+  featured    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([published])
+  @@index([featured])
+}
+
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+enum ServiceType {
+  WEB_DEVELOPMENT
+  APP_DEVELOPMENT
+  PERFORMANCE_OPTIMIZATION
+  API_DEVELOPMENT
+  PYTHON_APPLICATION
+  MOBILE_APP
+  CONSULTATION
+  FULL_STACK
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  REVISION
+  REVIEW
+  DONE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  BINANCE_PAY
+  STRIPE
+  PAYPAL
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String   // e.g., "CREATE_BLOG", "UPDATE_SETTINGS", "DELETE_USER"
+  entity    String   // e.g., "Blog", "Settings", "User"
+  entityId  String?  // ID of the affected entity
+  changes   Json?    // Object with before/after values
+  ipAddress String?
+  userAgent String?  @db.Text
+  status    String   @default("SUCCESS") // SUCCESS, FAILED, ERROR
+  reason    String?  // Why it failed (for failed attempts)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([entityId])
+}
+
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  referrer  String?
+  userAgent String?  @db.Text
+  ip        String?
+  country   String?
+  city      String?
+  device    String?  // desktop, mobile, tablet
+  browser   String?
+  os        String?
+  sessionId String?
+  userId    String?
+  duration  Int?     // seconds spent on page
+  createdAt DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+  @@index([country])
+  @@index([sessionId])
+}

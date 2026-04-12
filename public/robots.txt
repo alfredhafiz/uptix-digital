@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Disallow admin routes
+Disallow: /admin/
+Disallow: /client/
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://uptixdigital.com/sitemap.xml
