@@ -1,5 +1,7 @@
-node_modules
-.next
 .env
-.env.example
+.env.local
+.env.backup
+node_modules/
+.next/
 .vscode
+backup/
