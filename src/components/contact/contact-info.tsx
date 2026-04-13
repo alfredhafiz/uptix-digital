@@ -8,25 +8,25 @@ const contactInfo = [
   {
     icon: Mail,
     label: "Email",
-    value: "hello@uptixdigital.com",
-    href: "mailto:hello@uptixdigital.com",
+    value: "ask@uptixdigital.com",
+    href: "mailto:ask@uptixdigital.com",
   },
   {
     icon: Phone,
-    label: "Phone",
-    value: "+1 (555) 123-4567",
-    href: "tel:+15551234567",
+    label: "Phone/WhatsApp",
+    value: "+880 1603885608",
+    href: "https://wa.me/8801603885608",
   },
   {
     icon: MapPin,
     label: "Address",
-    value: "123 Tech Street, Digital City, DC 12345",
+    value: "Mirpur 10, Digital City, DC 1216, Dhaka, Bangladesh",
     href: "#",
   },
   {
     icon: Clock,
     label: "Working Hours",
-    value: "Mon - Fri: 9:00 AM - 6:00 PM EST",
+    value: "Always Open: We never sleep! Reach out anytime",
     href: "#",
   },
 ];

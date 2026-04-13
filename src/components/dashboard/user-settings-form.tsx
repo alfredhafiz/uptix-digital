@@ -125,7 +125,10 @@ export function UserSettingsForm({ user }: UserSettingsFormProps) {
       console.error("Error updating profile:", error);
       setMessage({
         type: "error",
-        text: "An error occurred while updating profile",
+        text:
+          error instanceof Error
+            ? error.message
+            : "An error occurred while updating profile",
       });
     } finally {
       setIsLoading(false);

@@ -130,15 +130,15 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center space-x-2 text-slate-400 text-sm">
                 <Mail className="w-4 h-4 text-blue-400" />
-                <span>hello@uptixdigital.com</span>
+                <span>ask@uptixdigital.com</span>
               </li>
               <li className="flex items-center space-x-2 text-slate-400 text-sm">
                 <Phone className="w-4 h-4 text-blue-400" />
-                <span>+1 (555) 123-4567</span>
+                <span>+880 1603885608</span>
               </li>
               <li className="flex items-start space-x-2 text-slate-400 text-sm">
                 <MapPin className="w-4 h-4 text-blue-400 mt-0.5" />
-                <span>123 Tech Street, Digital City, DC 12345</span>
+                <span>Mirpur 10, Digital City, DC 1216, Dhaka, Bangladesh</span>
               </li>
             </ul>
           </div>

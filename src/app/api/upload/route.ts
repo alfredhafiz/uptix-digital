@@ -4,6 +4,7 @@ import { writeFile } from "fs/promises";
 import { mkdir } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
+import { createHash } from "crypto";
 
 // Allowed file types – images + documents for order attachments
 const ALLOWED_TYPES: Record<string, string> = {
@@ -36,6 +37,43 @@ const USER_FOLDERS = new Set(["orders", "profiles"]);
 // Max file size: 5 MB for images, 20 MB for documents
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_DOC_SIZE = 20 * 1024 * 1024;
+
+async function uploadToCloudinary(file: File, folder: string): Promise<string> {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error("Cloudinary is not configured");
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const targetFolder = `uptix/${folder}`;
+  const signatureBase = `folder=${targetFolder}&timestamp=${timestamp}${apiSecret}`;
+  const signature = createHash("sha1").update(signatureBase).digest("hex");
+
+  const form = new FormData();
+  form.append("file", file);
+  form.append("api_key", apiKey);
+  form.append("timestamp", String(timestamp));
+  form.append("folder", targetFolder);
+  form.append("signature", signature);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+    {
+      method: "POST",
+      body: form,
+    },
+  );
+
+  const data = await response.json();
+  if (!response.ok || !data?.secure_url) {
+    throw new Error(data?.error?.message || "Cloudinary upload failed");
+  }
+
+  return data.secure_url as string;
+}
 
 export async function POST(req: Request) {
   try {
@@ -92,31 +130,42 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create upload directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
+    let publicUrl: string;
+    let filename: string;
+
+    // In production/serverless prefer Cloudinary for persistent uploads.
+    if (
+      process.env.NODE_ENV === "production" &&
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    ) {
+      publicUrl = await uploadToCloudinary(file, folder);
+      filename = publicUrl.split("/").pop() || `cloudinary-${Date.now()}`;
+    } else {
+      // Local/dev fallback: save under /public/uploads
+      const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
+      if (!existsSync(uploadDir)) {
+        await mkdir(uploadDir, { recursive: true });
+      }
+
+      const timestamp = Date.now();
+      const baseName = file.name
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[^a-zA-Z0-9.-]/g, "-");
+      filename = `${timestamp}-${baseName}${extension}`;
+      const filePath = path.join(uploadDir, filename);
+
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      await writeFile(filePath, buffer);
+      publicUrl = `/uploads/${folder}/${filename}`;
     }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const baseName = file.name
-      .replace(/\.[^/.]+$/, "")
-      .replace(/[^a-zA-Z0-9.-]/g, "-");
-    const filename = `${timestamp}-${baseName}${extension}`;
-    const filePath = path.join(uploadDir, filename);
-
-    // Convert file to buffer and save
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
-
-    const publicUrl = `/uploads/${folder}/${filename}`;
 
     return NextResponse.json({
       success: true,
       url: publicUrl,
-      filename: filename,
+      filename,
       size: file.size,
       type: file.type,
     });
