@@ -133,9 +133,8 @@ export async function POST(req: Request) {
     let publicUrl: string;
     let filename: string;
 
-    // In production/serverless prefer Cloudinary for persistent uploads.
+    // Prefer Cloudinary when configured (works for both local and production).
     if (
-      process.env.NODE_ENV === "production" &&
       process.env.CLOUDINARY_CLOUD_NAME &&
       process.env.CLOUDINARY_API_KEY &&
       process.env.CLOUDINARY_API_SECRET

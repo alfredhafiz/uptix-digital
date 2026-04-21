@@ -9,6 +9,9 @@ export async function GET() {
       where: {
         key: {
           in: [
+            "siteName",
+            "logo",
+            "favicon",
             "customHeadScripts",
             "customBodyScripts",
             "googleAnalyticsId",

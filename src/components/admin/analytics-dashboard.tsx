@@ -65,7 +65,9 @@ export function AnalyticsDashboard() {
   const fetchAnalytics = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/admin/analytics?range=${range}`);
+      const response = await fetch(`/api/admin/analytics?range=${range}`, {
+        cache: "no-store",
+      });
       if (response.ok) {
         const analyticsData = await response.json();
         setData(analyticsData);

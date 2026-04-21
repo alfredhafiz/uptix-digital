@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export async function GET(req: Request) {
   try {
@@ -127,7 +128,7 @@ export async function GET(req: Request) {
       prisma.pageView.findMany({
         where: pvWhere,
         orderBy: { createdAt: "desc" },
-        take: 50,
+        take: 25,
         select: {
           id: true,
           path: true,
@@ -190,6 +191,10 @@ export async function GET(req: Request) {
       })),
       recentVisitors,
       dailyViews,
+    }, {
+      headers: {
+        "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+      },
     });
   } catch (error) {
     console.error("Analytics error:", error);

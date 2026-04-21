@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Code2,
@@ -48,6 +50,38 @@ const socialLinks = [
 ];
 
 export function Footer() {
+  const [branding, setBranding] = useState<{
+    siteName: string;
+    logo: string | null;
+  }>({
+    siteName: "Uptix Digital",
+    logo: null,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchBranding = async () => {
+      try {
+        const response = await fetch("/api/public/settings", {
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (cancelled) return;
+        setBranding({
+          siteName: data.siteName || "Uptix Digital",
+          logo: data.logo || null,
+        });
+      } catch {
+        // keep defaults
+      }
+    };
+    fetchBranding();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <footer className="relative border-t border-white/10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -55,11 +89,23 @@ export function Footer() {
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center space-x-2 mb-6">
-              <div className="bg-slate-900 rounded-lg p-2 border border-white/10">
-                <Code2 className="w-6 h-6 text-blue-400" />
-              </div>
+              {branding.logo ? (
+                <div className="bg-slate-900 rounded-lg p-2 border border-white/10">
+                  <Image
+                    src={branding.logo}
+                    alt={`${branding.siteName} logo`}
+                    width={28}
+                    height={28}
+                    className="w-7 h-7 object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="bg-slate-900 rounded-lg p-2 border border-white/10">
+                  <Code2 className="w-6 h-6 text-blue-400" />
+                </div>
+              )}
               <span className="text-xl font-bold gradient-text">
-                Uptix<span className="text-white">.digital</span>
+                {branding.siteName}
               </span>
             </Link>
             <p className="text-slate-400 mb-6 max-w-sm">

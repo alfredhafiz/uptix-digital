@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -35,6 +36,13 @@ const navLinks = [
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [branding, setBranding] = useState<{
+    siteName: string;
+    logo: string | null;
+  }>({
+    siteName: "Uptix Digital",
+    logo: null,
+  });
   const sessionData = useSession();
   const { data: session, status } = sessionData || {};
   const isLoading = status === "loading";
@@ -56,11 +64,31 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", throttledScroll);
   }, [throttledScroll]);
 
-  const avatarUrl = useMemo(() => {
-    if (session?.user?.image) return session.user.image;
-    const name = session?.user?.name || session?.user?.email || "User";
-    return `https://api.dicebear.com/7.x/avataaars/png?seed=${encodeURIComponent(name)}&backgroundColor=b6e3f4`;
-  }, [session]);
+  useEffect(() => {
+    let cancelled = false;
+    const fetchBranding = async () => {
+      try {
+        const response = await fetch("/api/public/settings", {
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (cancelled) return;
+        setBranding({
+          siteName: data.siteName || "Uptix Digital",
+          logo: data.logo || null,
+        });
+      } catch {
+        // keep defaults
+      }
+    };
+    fetchBranding();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const avatarUrl = useMemo(() => session?.user?.image || null, [session]);
 
   const userInitials = useMemo(() => {
     const name = session?.user?.name || session?.user?.email || "U";
@@ -88,21 +116,35 @@ export function Navbar() {
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 group">
-            <motion.div
-              whileHover={{ rotate: 180 }}
-              transition={{ duration: 0.3 }}
-              className="relative"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg blur-lg opacity-50 group-hover:opacity-100 transition-opacity" />
-              <div className="relative bg-slate-900 rounded-lg p-2 border border-white/10">
-                <Code2 className="w-6 h-6 text-blue-400" />
-              </div>
-            </motion.div>
-            <span className="text-xl font-bold gradient-text">
-              Uptix<span className="text-white">.digital</span>
-            </span>
-          </Link>
+            <Link href="/" className="flex items-center space-x-2 group">
+              <motion.div
+                whileHover={{ rotate: 180 }}
+                transition={{ duration: 0.3 }}
+                className="relative"
+              >
+                {branding.logo ? (
+                  <div className="relative bg-slate-900 rounded-lg p-2 border border-white/10">
+                    <Image
+                      src={branding.logo}
+                      alt={`${branding.siteName} logo`}
+                      width={28}
+                      height={28}
+                      className="w-7 h-7 object-contain"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg blur-lg opacity-50 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative bg-slate-900 rounded-lg p-2 border border-white/10">
+                      <Code2 className="w-6 h-6 text-blue-400" />
+                    </div>
+                  </>
+                )}
+              </motion.div>
+              <span className="text-xl font-bold gradient-text">
+                {branding.siteName}
+              </span>
+            </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
@@ -230,6 +272,8 @@ export function Navbar() {
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="md:hidden relative z-50 p-2"
+            aria-label="Toggle mobile menu"
+            aria-expanded={isOpen}
           >
             <motion.div
               animate={{ rotate: isOpen ? 180 : 0 }}
@@ -248,13 +292,13 @@ export function Navbar() {
       {/* Mobile Menu */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="md:hidden fixed inset-0 top-20 glass-strong"
-          >
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="md:hidden absolute inset-x-0 top-full z-[80] h-[calc(100dvh-5rem)] glass-strong overflow-y-auto"
+            >
             <div className="flex flex-col items-center justify-center h-full space-y-8">
               {navLinks.map((link, index) => (
                 <motion.div
