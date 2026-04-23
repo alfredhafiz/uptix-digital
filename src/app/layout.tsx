@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { CursorInitializer } from "@/components/cursor-initializer";
@@ -120,6 +121,7 @@ export default function RootLayout({
               <main className="relative z-10">{children}</main>
               <Footer />
               <SpeedInsights />
+              <Analytics />
             </div>
           </AuthProvider>
         </ThemeProvider>
